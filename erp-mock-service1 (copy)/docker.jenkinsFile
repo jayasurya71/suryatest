@@ -1,0 +1,94 @@
+jobName       = env.JOB_NAME
+nodeLabel     = params.LABEL
+s3Build       = params.S3
+release       = params.BRANCH
+tags          = params.TAG
+nodeEnv       = params.NODE_ENV
+client        = params.CLIENT
+notification  = params.NOTIFICATION
+customImage   = "";
+imageName     = "669650451927.dkr.ecr.ap-south-1.amazonaws.com/template-service"
+slackError    = 0
+
+labelNo = nodeLabel.reverse().take(1).reverse()
+echo labelNo
+
+
+node(nodeLabel) { //Node where autoscaling occur
+
+   //The checkout stage is used to switch between branches.
+      stage('Checkout') {
+
+             //branch = params.BRANCH
+           checkout([$class: 'GitSCM', branches: [[name: params.BRANCH]], doGenerateSubmoduleConfigurations: false,
+                      extensions: [],submoduleCfg: [], userRemoteConfigs: [[credentialsId: '30a3a50f-826d-4349-bfb9-e3b9208ac50e',url: 'https://github.com/pandocorp/nodejs-template-service.git']]])
+      }
+
+   //Intial Setups
+      stage('Intial Setup') {
+
+        //Copying S3 files
+         sh "aws s3 cp s3://service-config/ config/ --recursive"
+
+	  }
+
+
+
+	//try-catch block
+	 try {
+
+	       //Image name where this job has to run
+	       stage("Building Docker image") {
+	          customImage = docker.build("$imageName:${env.BUILD_ID}","--build-arg S3DEPLOY=$s3Build --build-arg NODEENV=$nodeEnv -f Dockerfile .")
+	       }
+
+
+	       //Checking Version list
+	       stage("Version List") {
+
+	             customImage.inside() {
+
+	                sh "node -v"
+	                sh "yarn -v"
+	                sh "npx -v"
+
+		         }
+	       }
+
+
+	       //Removing old build
+	       stage("Discard Previous Build") {
+	           sh "docker stop $nodeLabel"
+	           sh "docker rm $nodeLabel"
+	       }
+
+
+	       //Deploying new build
+		   stage("Deploying New Build") {
+			  sh "docker run --name $nodeLabel -p 1234:1234 -d $imageName:${env.BUILD_ID}"
+			  sh "docker tag $imageName:${env.BUILD_ID} $imageName:$nodeLabel"
+		   }
+
+	  }
+
+	  //In case there are any errors in the above stages, this catch block will display an error message
+	  catch (e) {
+
+	      echo 'Issue ' + e
+	      slackError = 1
+	      sh 'exit 1'
+
+	  } finally {
+
+	    //Finally all the reports are published to the user
+	      stage('Publish Reports') {
+
+             if(nodeLabel.contains("staging_label")) {
+                  sh '$(aws ecr get-login --no-include-email --region ap-south-1)'
+	              customImage.push()
+	         }
+
+	      }
+	   }
+
+ } //End of machine

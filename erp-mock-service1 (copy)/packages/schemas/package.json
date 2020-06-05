@@ -1,0 +1,9 @@
+{
+  "name": "service-schemas",
+  "version": "1.0.0",
+  "main": "index.js",
+  "dependencies": {
+    "mongoose": "5.9.7",
+    "mongoose-beautiful-unique-validation": "^7.1.1"
+  }
+}

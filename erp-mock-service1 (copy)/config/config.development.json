@@ -1,0 +1,15 @@
+{
+  "environment": "development",
+  "service": {
+    "port": 1234,
+    "url": "mongodb://localhost:27017",
+    "poolSize": "1",
+    "database": ""
+  },
+  "loggly" :{
+    "isEnabled":false,
+    "domain": "gopando",
+    "token": "test",
+    "tag": "dev"
+  }
+}

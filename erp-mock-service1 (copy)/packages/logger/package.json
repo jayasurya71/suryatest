@@ -1,0 +1,11 @@
+{
+  "name": "pando-logger",
+  "version": "1.0.0",
+  "main": "./lib/index.js",
+  "dependencies": {
+    "pando-env": "1.0.0",
+    "pando-middlewares": "1.0.0",
+    "winston": "^2.4.2",
+    "winston-loggly-bulk": "^2.0.3"
+  }
+}
